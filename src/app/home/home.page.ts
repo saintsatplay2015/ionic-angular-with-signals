@@ -1,26 +1,50 @@
-import { Component, signal, WritableSignal } from '@angular/core';
-import { IonHeader, IonToolbar, IonTitle, IonContent } from '@ionic/angular/standalone';
-import { of, forkJoin } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, signal, WritableSignal, AfterViewInit } from '@angular/core';
+import { IonHeader, 
+         IonToolbar, 
+         IonTitle, 
+         IonContent,
+         IonAccordion,
+         IonAccordionGroup,
+         IonLabel,
+         IonItem,
+         IonCard,
+         IonCardHeader,
+         IonCardContent,
+         IonCardTitle,
+         IonCardSubtitle
+       } from '@ionic/angular/standalone';
 
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   standalone: true,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent],
+  imports: [IonHeader, 
+            IonToolbar, 
+            IonTitle, 
+            IonContent,
+            IonAccordion,
+            IonAccordionGroup,
+            IonLabel,
+            IonItem,
+            IonCard,
+            IonCardHeader,
+            IonCardContent,
+            IonCardTitle,
+            IonCardSubtitle],
 })
-export class HomePage {
+export class HomePage implements AfterViewInit {
 
 
   /**
+   * @todo Create Interfaces for the array parameters/types
+   * 
    * @public
-   * @property filmQuery
-   * @type {WritableSignal<Array<{ genre: string, films: any }>>}
+   * @property items
+   * @type {WritableSignalArray<{ genre: string, films: Array<{ title: string, description: string, cast: any }> }> | null}
    * @memberof HomePage
    */
-  public filmQuery: WritableSignal<Array<{ genre: string, films: any }> | null> = signal<Array<{ genre: string, films: any }> | null>(null);
+  public items: WritableSignal<Array<{ genre: string, films: Array<{ title: string, description: string, cast: any }> }> | null> = signal<Array<{ genre: string, films: Array<{ title: string, description: string, cast: any }> }> | null>(null);
 
 
   /**
@@ -100,50 +124,57 @@ export class HomePage {
 
 
   constructor() {
-    this.parseAndMergeSeparateDataArraysWithcombineLatestOrForkJoin();
   }
 
 
-  private parseAndMergeSeparateDataArraysWithcombineLatestOrForkJoin(): void {
-    forkJoin([of(this.genres), of(this.films), of(this.cast)])
-      .pipe(
-        map(([genres, films, cast]) => {
-          const obj = genres.map(genre => {
-            const items = Object.assign({}, { genre: genre.id, 
-                                              films: this.modifyReturnedDataStructure(films, genre) 
-                                          });
-            return items;
-          });
+  ngAfterViewInit(): void {
+    this.mapSeparateArraysIntoOne();
+  }
 
-          obj.map(film => {
-            const elem = cast.filter(people => film.films.find(( { title }) =>  people.filmId === title));
-            film.films.map((film => {
-              const match = elem.filter(people => film.title === people.filmId);
-              film.cast = this.removeId(match);
-            }));
-          });
-          this.filmQuery.set(obj);
-        })
-      );
-      console.log('Film query:', this.filmQuery);
-  } 
+
+  /**
+   * @private
+   * @method mapSeparateArraysIntoOne
+   * @returns none
+   * @memberof HomePage
+   */
+  private mapSeparateArraysIntoOne (): void {
+    const obj = this.genres.map((genre: { id: string; description: string; }) => {
+      const items = Object.assign({}, { genre: genre.id, 
+                                        films: this.modifyReturnedDataStructure(this.films, genre) 
+                                    });
+      return items;  
+    });
+    obj.map(film => {
+      const elem = this.cast.filter(people => film.films.find(( { title }) =>  people.filmId === title));
+      film.films.map((film => {
+        const match = elem.filter(people => film.title === people.filmId);
+        film.cast = this.removeId(match);
+      }));
+    });
+    console.log('Obj', obj);
+    this.items.set(obj);
+    console.log('Film query:', this.items);
+  }
 
 
   /**
    * @private
    * @method modifyReturnedDataStructure
-   * @param {Array<any>} films
+   * @param {Array<{ genre: string, title: string, description: string }>} films
    * @param {*} genre
    * @description   Iterates through the supplied films array and returns only those films that match the supplied genre
    * @returns {Array<{ title: string, description: string, cast: any}>}
    * @memberof HomePage
    */
-  private modifyReturnedDataStructure(films: Array<any>, genre: any): Array<{ title: string, description: string, cast: any}> {
-    const movies = films.filter((film: any) => {
+  private modifyReturnedDataStructure(films: Array<{ genre: string, title: string, description: string }>, 
+                                      genre: any): Array<{ title: string, description: string, cast: any}> {
+    let movies: Array<{ title: string, description: string, cast: any}> = [];
+    films.forEach((film: any) => {
       if (film.genre === genre.id) { 
-        return { title: film.title, 
+        movies.push({ title: film.title, 
                  description: film.description,
-                 cast: null };
+                 cast: null });
       }
     }); 
     this.removeGenre(movies);
