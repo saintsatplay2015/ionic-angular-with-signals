@@ -1,0 +1,7 @@
+{
+  "name": "ionic-signals",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
